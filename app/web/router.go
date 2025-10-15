@@ -31,8 +31,6 @@ func registerRoutes(router *gin.Engine) {
 		api.GET("/test", handlers.Test)
 
 		registerLotteryRoutes(api)
-		registerUserRoutes(api)
-
 		// 在这里添加更多路由...
 	}
 }
