@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"shopify_lottery_draw/app/entities"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -16,6 +17,19 @@ func InitDB(dsn string) {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+
+	err = db.AutoMigrate(
+		&entities.User{},
+		&entities.Token{},
+		&entities.ProductPool{},
+		&entities.UserHash{},
+		&entities.DrawResult{},
+	)
+	if err != nil {
+		log.Fatalf("Failed to auto migrate database: %v", err)
+	}
+
+	log.Println("Database tables migrated successfully")
 }
 
 // GetDB 获取数据库实例
