@@ -1,0 +1,12 @@
+# 配置文件
+# /config/config.yaml
+
+# 为了安全，也可以忽略所有 .yaml 文件，但保留示例文件
+/config/*.yaml
+!/config/*.example.yaml
+
+# 其他常见需要忽略的文件
+.DS_Store
+*.log
+/tmp
+/dist

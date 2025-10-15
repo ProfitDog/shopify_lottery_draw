@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"shopify_lottery_draw/app/database"
+	"shopify_lottery_draw/app/models"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +16,7 @@ type OrderPaidCallbackRequest struct {
 	Username      string    `json:"username"`       // 用户名
 	TransactionID string    `json:"transaction_id"` // 交易哈希号
 	Timestamp     time.Time `json:"timestamp"`      // 交易时间
-	ProductID     string    `json:"product_id"`     // 商品号
+	ProductID     int       `json:"product_id"`     // 商品号
 }
 
 // OnOrderPaidCallback 处理订单支付回调
@@ -27,6 +30,20 @@ func OnOrderPaidCallback(c *gin.Context) {
 		})
 		return
 	}
+
+	// 验证订单存在性
+
+	// 写入数据库
+	database.NewBaseRepository[models.UserHash](database.GetDB()).Create(&models.UserHash{
+		UserID:      req.Username,
+		OrderID:     req.OrderNumber,
+		ProductID:   req.ProductID,
+		TxHash:      req.TransactionID,
+		IsValid:     true,
+		ResetCount:  0,
+		CreatedAt:   time.Now(),
+		LastResetAt: time.Now(),
+	})
 
 	// 返回成功响应
 	c.JSON(http.StatusOK, gin.H{
