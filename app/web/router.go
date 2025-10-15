@@ -13,6 +13,9 @@ func SetupRouter() *gin.Engine {
 	// 注册静态文件路由
 	registerStaticRoutes(router)
 
+	// 注册认证路由
+	registerAuthRoutes(router)
+
 	// 注册所有路由
 	registerRoutes(router)
 

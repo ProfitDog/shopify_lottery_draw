@@ -16,6 +16,7 @@ func registerStaticRoutes(router *gin.Engine) {
 	router.Static("/assets", frontendDir+"/assets") // 处理前端资源文件
 	router.StaticFile("/favicon.ico", frontendDir+"/favicon.ico")
 
+	
 	// 所有前端路由都返回 index.html
 	router.NoRoute(func(c *gin.Context) {
 		// 如果请求的是 API 路由，返回 404
