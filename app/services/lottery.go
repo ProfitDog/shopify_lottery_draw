@@ -93,8 +93,9 @@ func (ls *LotteryService) ProcessOrder(userID, orderID string, productID int, pr
 		return nil, fmt.Errorf("商品 %d 的奖池未激活", productID)
 	}
 
-	// 获取可用的比特币交易哈希
-	txHash, err := ls.GetAvailableHash()
+	// 通过哈希管理器获取可用的比特币交易哈希
+	hashManager := GetHashManager()
+	txHash, err := hashManager.GetHashForPool(productID)
 	if err != nil {
 		return nil, fmt.Errorf("获取比特币交易哈希失败: %v", err)
 	}
@@ -156,8 +157,9 @@ func (ls *LotteryService) ResetHash(userID string, hashID int, amount float64) (
 		return nil, fmt.Errorf("24小时内只能重置一次")
 	}
 
-	// 获取新的可用哈希值
-	newHash, err := ls.GetAvailableHash()
+	// 通过哈希管理器获取新的可用哈希值
+	hashManager := GetHashManager()
+	newHash, err := hashManager.GetHashForPool(targetHash.ProductID)
 	if err != nil {
 		return nil, fmt.Errorf("获取新的比特币交易哈希失败: %v", err)
 	}
@@ -440,14 +442,6 @@ func (ls *LotteryService) GetPool(productID int) *models.ProductPool {
 	return nil
 }
 
-// BitcoinTransaction 比特币交易结构
-type BitcoinTransaction struct {
-	TxID  string `json:"txid"`
-	Fee   int64  `json:"fee"`
-	VSize int64  `json:"vsize"`
-	Value int64  `json:"value"`
-}
-
 // GetBtcOrderHash 获取指定区块高度的交易哈希（支持分页）
 func (ls *LotteryService) GetBtcOrderHash(blockHeight int, limit int, offset int) ([]string, error) {
 	// 获取指定区块高度的交易哈希
@@ -535,19 +529,4 @@ func (ls *LotteryService) getBlockTransactions(height int) ([]string, error) {
 	}
 
 	return hashes, nil
-}
-
-// removeDuplicates 去重
-func (ls *LotteryService) removeDuplicates(hashes []string) []string {
-	keys := make(map[string]bool)
-	var result []string
-
-	for _, hash := range hashes {
-		if !keys[hash] {
-			keys[hash] = true
-			result = append(result, hash)
-		}
-	}
-
-	return result
 }

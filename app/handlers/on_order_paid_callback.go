@@ -12,11 +12,10 @@ import (
 
 // OrderPaidCallbackRequest 订单支付回调请求结构
 type OrderPaidCallbackRequest struct {
-	OrderNumber   string    `json:"order_number"`   // 订单号
-	Username      string    `json:"username"`       // 用户名
-	TransactionID string    `json:"transaction_id"` // 交易哈希号
-	Timestamp     time.Time `json:"timestamp"`      // 交易时间
-	ProductID     int       `json:"product_id"`     // 商品号
+	OrderNumber string    `json:"order_number"` // 订单号
+	UserId      string    `json:"user_id"`      // 用户ID
+	Timestamp   time.Time `json:"timestamp"`    // 交易时间
+	ProductID   int       `json:"product_id"`   // 商品号
 }
 
 // OnOrderPaidCallback 处理订单支付回调
@@ -35,7 +34,7 @@ func OnOrderPaidCallback(c *gin.Context) {
 
 	// 写入数据库
 	database.NewBaseRepository[models.UserHash](database.GetDB()).Create(&models.UserHash{
-		UserID:      req.Username,
+		UserID:      req.UserId,
 		OrderID:     req.OrderNumber,
 		ProductID:   req.ProductID,
 		TxHash:      req.TransactionID,
@@ -51,7 +50,7 @@ func OnOrderPaidCallback(c *gin.Context) {
 		"message": "Order paid callback received successfully",
 		"data": gin.H{
 			"order_number":   req.OrderNumber,
-			"username":       req.Username,
+			"user_id":        req.UserId,
 			"transaction_id": req.TransactionID,
 			"timestamp":      req.Timestamp,
 			"product_id":     req.ProductID,

@@ -1,8 +1,6 @@
 package web
 
 import (
-	"shopify_lottery_draw/app/handlers"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,7 +26,7 @@ func registerRoutes(router *gin.Engine) {
 	api := router.Group("/api")
 	{
 		// 测试路由
-		api.GET("/test", handlers.Test)
+		// api.GET("/test", handlers.Test)
 
 		registerLotteryRoutes(api)
 		// 在这里添加更多路由...
