@@ -1,131 +1,186 @@
 package services
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"math"
-	"net/http"
+	"shopify_lottery_draw/app/database"
+	"shopify_lottery_draw/app/entities"
 	"shopify_lottery_draw/app/models"
+	"shopify_lottery_draw/app/repositories"
 	"sort"
+	"sync"
 	"time"
 )
 
 // LotteryService 抽奖服务
 type LotteryService struct {
-	pools              map[int]*models.ProductPool   // 商品奖池
-	userHashes         map[string][]*models.UserHash // 用户哈希记录 key: userID
-	drawResults        []models.DrawResult           // 开奖历史
-	nextID             int                           // 下一个ID
-	usedHashes         map[string]bool               // 已使用的哈希值
-	currentBlockHeight int                           // 当前区块高度
+	pools       map[int]*models.ProductPool     // 商品奖池（内存维护）
+	poolHashes  map[uint]*PoolHashes            // 奖池哈希列表 key: LotteryPoolID
+	drawResults []models.DrawResult             // 开奖历史
+	repo        *repositories.LotteryRepository // 数据库访问层
+	mu          sync.RWMutex                    // 读写锁
 }
 
-// NewLotteryService 创建抽奖服务
-func NewLotteryService() *LotteryService {
-	service := &LotteryService{
-		pools:              make(map[int]*models.ProductPool),
-		userHashes:         make(map[string][]*models.UserHash),
-		usedHashes:         make(map[string]bool),
-		nextID:             1,
-		currentBlockHeight: 917583, // 设置一个初始区块高度
-	}
+// 分片锁处理
+type PoolHashes struct {
+	hashes []string
+	mu     sync.RWMutex
+}
 
-	// 初始化一些示例商品奖池
-	service.initSamplePools()
+var (
+	lotteryService     *LotteryService
+	lotteryServiceOnce sync.Once
+)
 
-	return service
+// GetLotteryService 获取抽奖服务单例
+func GetLotteryService() *LotteryService {
+	lotteryServiceOnce.Do(func() {
+		db := database.GetDB()
+		lotteryService = &LotteryService{
+			pools:      make(map[int]*models.ProductPool),
+			poolHashes: make(map[uint]*PoolHashes),
+			repo:       repositories.NewLotteryRepository(db),
+			mu:         sync.RWMutex{},
+		}
+		// 初始化一些示例商品奖池
+		lotteryService.initSamplePools()
+		// 从数据库加载数据初始化奖池
+		lotteryService.loadFromDatabase()
+	})
+	return lotteryService
 }
 
 // initSamplePools 初始化示例商品奖池
 func (ls *LotteryService) initSamplePools() {
-	products := []struct {
-		ID      int
-		Name    string
-		WeekDay int
-		Hour    int
-	}{
-		{1, "iPhone 15", 1, 20},   // 周一 20:00 UTC
-		{2, "MacBook Pro", 3, 21}, // 周三 21:00 UTC
-		{3, "AirPods Pro", 5, 19}, // 周五 19:00 UTC
+	return
+}
+
+// loadFromDatabase 从数据库加载数据初始化奖池
+func (ls *LotteryService) loadFromDatabase() {
+	// 获取所有有效的用户哈希记录
+	userHashes, err := ls.repo.GetAllActiveProductPools()
+	if err != nil {
+		fmt.Printf("警告: 从数据库加载数据失败: %v\n", err)
+		return
 	}
 
-	for _, p := range products {
-		ls.pools[p.ID] = &models.ProductPool{
-			ProductID:   p.ID,
-			ProductName: p.Name,
-			TargetSales: 1000,
-			IsActive:    true,
-			CreatedAt:   time.Now(),
-			DrawWeekDay: p.WeekDay,
-			DrawHour:    p.Hour,
+	// 按 product_id 分组，初始化奖池哈希列表
+	for _, dbHash := range userHashes {
+		ls.pools[dbHash.ProductID] = &models.ProductPool{
+			ProductID:      dbHash.ProductID,
+			LotteryPoolID:  dbHash.LotteryPoolID,
+			ProductName:    dbHash.ProductName,
+			NowTargetSales: dbHash.NowTargetSales,
+			TargetSales:    dbHash.TargetSales,
+			CurrentSales:   dbHash.CurrentSales,
+			PoolAmount:     dbHash.PoolAmount,
+			IsActive:       dbHash.IsActive,
+			CreatedAt:      dbHash.CreatedAt,
+			LastDrawTime:   dbHash.LastDrawTime,
+			DrawWeekDay:    dbHash.DrawWeekDay,
+			DrawHour:       dbHash.DrawHour,
+		}
+		ls.poolHashes[dbHash.LotteryPoolID] = &PoolHashes{
+			hashes: make([]string, dbHash.NowTargetSales),
+			mu:     sync.RWMutex{},
 		}
 	}
+
+	fmt.Printf("从数据库加载了 %d 条奖号记录\n", len(userHashes))
 }
 
 // CreatePool 创建商品奖池
-func (ls *LotteryService) CreatePool(productID int, productName string, weekDay, hour int) error {
+func (ls *LotteryService) CreatePool(productID int, productName string, targetSales int) error {
+	if targetSales <= 0 {
+		return fmt.Errorf("目标销量必须大于0")
+	}
+
 	if _, exists := ls.pools[productID]; exists {
 		return fmt.Errorf("商品 %d 的奖池已存在", productID)
 	}
 
-	ls.pools[productID] = &models.ProductPool{
-		ProductID:   productID,
-		ProductName: productName,
-		TargetSales: 1000,
-		IsActive:    true,
-		CreatedAt:   time.Now(),
-		DrawWeekDay: weekDay,
-		DrawHour:    hour,
+	// 数据库创建奖池
+	poolID, err := ls.repo.CreateProductPool(&entities.ProductPool{
+		ProductID:      productID,
+		ProductName:    productName,
+		NowTargetSales: targetSales,
+		TargetSales:    targetSales,
+		IsActive:       true,
+		CreatedAt:      time.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("创建奖池失败: %v", err)
 	}
+
+	ls.mu.Lock()
+	ls.pools[productID] = &models.ProductPool{
+		LotteryPoolID:  poolID,
+		ProductID:      productID,
+		ProductName:    productName,
+		NowTargetSales: targetSales,
+		TargetSales:    targetSales,
+		IsActive:       true,
+		CreatedAt:      time.Now(),
+	}
+	ls.mu.Unlock()
 
 	return nil
 }
 
-// ProcessOrder 处理订单，分配哈希值
-func (ls *LotteryService) ProcessOrder(userID, orderID string, productID int, profit float64) (*models.UserHash, error) {
+// ProcessOrder 处理订单，分配哈希值（先写数据库，再更新内存）
+func (ls *LotteryService) ProcessOrder(userID, orderID string, productID int, profit float64) (string, error) {
+	// 判断奖池是否可用
 	pool, exists := ls.pools[productID]
 	if !exists {
-		return nil, fmt.Errorf("商品 %d 的奖池不存在", productID)
+		return "", fmt.Errorf("商品 %d 的奖池不存在", productID)
 	}
 
 	if !pool.IsActive {
-		return nil, fmt.Errorf("商品 %d 的奖池未激活", productID)
+		return "", fmt.Errorf("商品 %d 的奖池未激活", productID)
+
 	}
 
 	// 通过哈希管理器获取可用的比特币交易哈希
 	hashManager := GetHashManager()
-	txHash, err := hashManager.GetHashForPool(productID)
+	txHash, err := hashManager.GetHashForPool(ls.poolHashes[pool.LotteryPoolID].hashes)
 	if err != nil {
-		return nil, fmt.Errorf("获取比特币交易哈希失败: %v", err)
+		return "", fmt.Errorf("获取比特币交易哈希失败: %v", err)
 	}
 
-	// 创建用户哈希记录
-	userHash := &models.UserHash{
-		ID:          ls.nextID,
-		UserID:      userID,
-		OrderID:     orderID,
-		ProductID:   productID,
-		TxHash:      txHash,
-		IsValid:     true,
-		ResetCount:  0,
-		CreatedAt:   time.Now(),
-		LastResetAt: time.Time{},
+	err = ls.repo.CreateUserHash(&entities.UserHash{
+		UserID:        userID,
+		LotteryPoolID: pool.LotteryPoolID,
+		OrderID:       orderID,
+		ProductID:     productID,
+		TxHash:        txHash,
+		IsValid:       true,
+		ResetCount:    0,
+		CreatedAt:     time.Now(),
+		LastResetAt:   time.Time{},
+	})
+	if err != nil {
+		return "", fmt.Errorf("写入数据库失败: %v", err)
 	}
 
-	ls.nextID++
-
-	// 添加到用户哈希记录
-	if ls.userHashes[userID] == nil {
-		ls.userHashes[userID] = make([]*models.UserHash, 0)
+	// 添加到奖池哈希列表
+	if ls.poolHashes[pool.LotteryPoolID] == nil {
+		ls.poolHashes[pool.LotteryPoolID] = &PoolHashes{
+			hashes: make([]string, 0),
+			mu:     sync.RWMutex{},
+		}
 	}
-	ls.userHashes[userID] = append(ls.userHashes[userID], userHash)
+
+	ls.poolHashes[pool.LotteryPoolID].mu.Lock()
+	ls.poolHashes[pool.LotteryPoolID].hashes = append(ls.poolHashes[pool.LotteryPoolID].hashes, txHash)
+	ls.poolHashes[pool.LotteryPoolID].mu.Unlock()
 
 	// 更新奖池
-	pool.CurrentSales++
-	pool.PoolAmount += profit
+	ls.mu.Lock()
+	ls.pools[productID].CurrentSales++
+	ls.pools[productID].PoolAmount += profit
+	ls.mu.Unlock()
 
-	return userHash, nil
+	return txHash, nil
 }
 
 // ResetHash 重置哈希值
@@ -389,40 +444,6 @@ func (ls *LotteryService) calculateNextDrawTime(pool *models.ProductPool) time.T
 	return targetTime
 }
 
-// GetAvailableHash 获取可用的比特币交易哈希
-func (ls *LotteryService) GetAvailableHash() (string, error) {
-	limit := 20 // 每次获取20个哈希
-	offset := 0
-
-	for {
-		// 获取当前区块高度的哈希
-		hashes, err := ls.GetBtcOrderHash(ls.currentBlockHeight, limit, offset)
-		if err != nil {
-			return "", err
-		}
-
-		// 如果没有更多哈希，尝试前一个区块
-		if len(hashes) == 0 {
-			ls.currentBlockHeight--
-			offset = 0
-			continue
-		}
-
-		// 查找未使用的哈希
-		for _, hash := range hashes {
-			if !ls.usedHashes[hash] {
-				// 标记为已使用
-				ls.usedHashes[hash] = true
-				return hash, nil
-			}
-		}
-
-		// 如果当前区块的所有哈希都被使用，尝试前一个区块
-		ls.currentBlockHeight--
-		offset = 0
-	}
-}
-
 // GetDrawHistory 获取开奖历史
 func (ls *LotteryService) GetDrawHistory(productID int) []models.DrawResult {
 	var results []models.DrawResult
@@ -442,91 +463,18 @@ func (ls *LotteryService) GetPool(productID int) *models.ProductPool {
 	return nil
 }
 
-// GetBtcOrderHash 获取指定区块高度的交易哈希（支持分页）
-func (ls *LotteryService) GetBtcOrderHash(blockHeight int, limit int, offset int) ([]string, error) {
-	// 获取指定区块高度的交易哈希
-	blockHashes, err := ls.getBlockTransactions(blockHeight)
-	if err != nil {
-		return nil, err
+// GetPoolHashes 获取奖池的哈希列表
+func (ls *LotteryService) GetPoolHashes(productID int) []string {
+	if hashes, exists := ls.poolHashes[productID]; exists {
+		return hashes
 	}
-
-	// 设置默认值
-	if limit <= 0 {
-		limit = 50 // 默认每次获取50个
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
-	// 计算返回范围
-	start := offset
-	end := offset + limit
-
-	// 确保不超出范围
-	if start >= len(blockHashes) {
-		return []string{}, nil // 没有更多数据
-	}
-	if end > len(blockHashes) {
-		end = len(blockHashes)
-	}
-
-	return blockHashes[start:end], nil
+	return []string{}
 }
 
-// getBlockTransactions 获取指定区块高度中的交易
-func (ls *LotteryService) getBlockTransactions(height int) ([]string, error) {
-	// 第一步：获取区块哈希
-	blockURL := fmt.Sprintf("https://blockstream.info/api/block-height/%d", height)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(blockURL)
-	if err != nil {
-		return nil, err
+// GetPoolHashCount 获取奖池的哈希数量
+func (ls *LotteryService) GetPoolHashCount(productID int) int {
+	if hashes, exists := ls.poolHashes[productID]; exists {
+		return len(hashes)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("获取区块哈希失败，状态码: %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	blockHash := string(body)
-	if len(blockHash) != 64 {
-		return nil, fmt.Errorf("无效的区块哈希: %s", blockHash)
-	}
-
-	// 第二步：使用区块哈希获取交易列表
-	txsURL := fmt.Sprintf("https://blockstream.info/api/block/%s/txs", blockHash)
-	resp2, err := client.Get(txsURL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp2.Body.Close()
-
-	if resp2.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("获取区块交易失败，状态码: %d", resp2.StatusCode)
-	}
-
-	body2, err := io.ReadAll(resp2.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var transactions []BitcoinTransaction
-	if err := json.Unmarshal(body2, &transactions); err != nil {
-		return nil, fmt.Errorf("解析交易数据失败: %v", err)
-	}
-
-	var hashes []string
-	for _, tx := range transactions {
-		if tx.TxID != "" {
-			hashes = append(hashes, tx.TxID)
-		}
-	}
-
-	return hashes, nil
+	return 0
 }

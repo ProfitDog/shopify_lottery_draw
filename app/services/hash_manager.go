@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"shopify_lottery_draw/app/models"
 	"sync"
@@ -17,9 +18,7 @@ type BitcoinTransaction struct {
 
 // HashManager 哈希管理器
 type HashManager struct {
-	globalPools        [5]*models.HashPool     // 全局5个哈希池（每个1000个哈希，不删除）
-	poolUsage          map[int]map[string]bool // 每个lottery pool的使用记录
-	usageMu            sync.RWMutex            // 保护 poolUsage
+	globalPools        [5]*models.HashPool // 全局5个哈希池（每个1000个哈希，不删除）
 	currentBlockHeight int
 	blockHeightLock    sync.Mutex
 }
@@ -33,7 +32,6 @@ var (
 func GetHashManager() *HashManager {
 	hashManagerOnce.Do(func() {
 		hashManager = &HashManager{
-			poolUsage:          make(map[int]map[string]bool),
 			currentBlockHeight: 917583, // 初始区块高度
 		}
 		// 初始化5个全局哈希池
@@ -44,57 +42,19 @@ func GetHashManager() *HashManager {
 	return hashManager
 }
 
-// ensurePoolUsageMap 确保奖池使用记录存在
-func (m *HashManager) ensurePoolUsageMap(poolID int) {
-	m.usageMu.RLock()
-	_, exists := m.poolUsage[poolID]
-	m.usageMu.RUnlock()
+// GetHashForPool 为lottery pool获取一个哈希（随机选择全局池）
+func (m *HashManager) GetHashForPool(poolHashes []string) (string, error) {
+	// 生成1~5之间的随机数（索引0~4）
+	randomIdx := rand.Intn(5)
 
-	if !exists {
-		m.usageMu.Lock()
-		if _, exists := m.poolUsage[poolID]; !exists {
-			m.poolUsage[poolID] = make(map[string]bool)
-		}
-		m.usageMu.Unlock()
-	}
-}
-
-// GetHashForPool 为lottery pool获取一个未使用的哈希（从全局池轮询遍历）
-func (m *HashManager) GetHashForPool(lotteryPoolID int) (string, error) {
-	m.ensurePoolUsageMap(lotteryPoolID)
-
-	// 遍历5个全局池，在每个池中查找未使用的哈希
-	for globalPoolIdx := 0; globalPoolIdx < 5; globalPoolIdx++ {
-		globalPool := m.globalPools[globalPoolIdx]
-		poolLen := globalPool.Len()
-
-		// 如果池为空，跳过
-		if poolLen == 0 {
-			continue
-		}
-
-		// 遍历该全局池的所有哈希（从0到poolLen-1）
-		for hashIdx := 0; hashIdx < poolLen; hashIdx++ {
-			hash, ok := globalPool.Get(hashIdx)
-			if !ok {
-				continue
-			}
-
-			// 原子化检查和设置（避免并发竞态）
-			m.usageMu.Lock()
-			isUsed := m.poolUsage[lotteryPoolID][hash]
-			if !isUsed {
-				// 找到未使用的哈希，标记并返回
-				m.poolUsage[lotteryPoolID][hash] = true
-				m.usageMu.Unlock()
-				return hash, nil
-			}
-			m.usageMu.Unlock()
-		}
+	// 从随机选中的池获取下一个哈希（内部自动加锁、索引自增）
+	hash, ok := m.globalPools[randomIdx].GetNext(poolHashes)
+	if ok {
+		return hash, nil
 	}
 
-	// 所有全局池都遍历完了，仍未找到可用哈希，说明需要刷新全局池
-	return "", fmt.Errorf("所有全局池的哈希已被lottery pool %d使用，需要刷新全局池", lotteryPoolID)
+	// 如果该池已用完，需要刷新全局池
+	return "", fmt.Errorf("全局池 %d 的哈希已用完，需要刷新全局池", randomIdx)
 }
 
 // RefreshGlobalPools 刷新全局哈希池（获取5000个哈希，每池1000个）
@@ -249,28 +209,22 @@ func (m *HashManager) PreloadGlobalPools(hashes []string) {
 }
 
 // GetGlobalPoolsStatus 获取全局哈希池状态
-func (m *HashManager) GetGlobalPoolsStatus() map[string]interface{} {
-	totalCount := 0
-	poolStatus := make([]int, 5)
-	for i := 0; i < 5; i++ {
-		count := m.globalPools[i].Len()
-		poolStatus[i] = count
-		totalCount += count
-	}
+// func (m *HashManager) GetGlobalPoolsStatus() map[string]interface{} {
+// 	totalRemaining := 0
+// 	poolStatus := make([]map[string]int, 5)
+// 	for i := 0; i < 5; i++ {
+// 		total := m.globalPools[i].Len()
+// 		remaining := m.globalPools[i].Len() - len(poolHashes)
+// 		poolStatus[i] = map[string]int{
+// 			"total":     total,
+// 			"remaining": remaining,
+// 			"used":      total - remaining,
+// 		}
+// 		totalRemaining += remaining
+// 	}
 
-	return map[string]interface{}{
-		"total_hashes": totalCount,
-		"pool_status":  poolStatus,
-	}
-}
-
-// GetLotteryPoolUsage 获取指定奖池的使用记录数量
-func (m *HashManager) GetLotteryPoolUsage(poolID int) int {
-	m.usageMu.RLock()
-	defer m.usageMu.RUnlock()
-
-	if usage, exists := m.poolUsage[poolID]; exists {
-		return len(usage)
-	}
-	return 0
-}
+// 	return map[string]interface{}{
+// 		"total_remaining": totalRemaining,
+// 		"pool_status":     poolStatus,
+// 	}
+// }

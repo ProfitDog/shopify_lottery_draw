@@ -4,18 +4,20 @@ import "time"
 
 // ProductPool 商品奖池表
 type ProductPool struct {
-	ID           uint      `gorm:"primarykey"`
-	ProductID    int       `gorm:"not null"`
-	ProductName  string    `gorm:"type:varchar(255);not null"`
-	TargetSales  int       `gorm:"not null;default:1000"`
-	CurrentSales int       `gorm:"not null;default:0"`
-	PoolAmount   float64   `gorm:"type:decimal(20,2);not null;default:0"`
-	IsActive     bool      `gorm:"not null;default:true"`
-	DrawWeekDay  int       `gorm:"not null"`
-	DrawHour     int       `gorm:"not null"`
-	LastDrawTime time.Time `gorm:"index"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID             uint      `gorm:"primarykey"`
+	LotteryPoolID  uint      `gorm:"not null;index"`
+	ProductID      int       `gorm:"not null"`
+	ProductName    string    `gorm:"type:varchar(255);not null"`
+	NowTargetSales int       `gorm:"not null;default:1000"`
+	TargetSales    int       `gorm:"not null;default:1000"`
+	CurrentSales   int       `gorm:"not null;default:0"`
+	PoolAmount     float64   `gorm:"type:decimal(20,2);not null;default:0"`
+	IsActive       bool      `gorm:"not null;default:true"`
+	DrawWeekDay    int       `gorm:"not null"`
+	DrawHour       int       `gorm:"not null"`
+	LastDrawTime   time.Time `gorm:"index"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (ProductPool) TableName() string {

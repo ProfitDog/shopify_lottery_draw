@@ -6,16 +6,18 @@ import (
 
 // ProductPool 商品奖池
 type ProductPool struct {
-	ProductID    int       `json:"product_id"`     // 商品ID
-	ProductName  string    `json:"product_name"`   // 商品名称
-	TargetSales  int       `json:"target_sales"`   // 目标销量（默认1000）
-	CurrentSales int       `json:"current_sales"`  // 当前销量
-	PoolAmount   float64   `json:"pool_amount"`    // 奖池金额
-	IsActive     bool      `json:"is_active"`      // 是否激活
-	CreatedAt    time.Time `json:"created_at"`     // 创建时间
-	LastDrawTime time.Time `json:"last_draw_time"` // 上次开奖时间
-	DrawWeekDay  int       `json:"draw_week_day"`  // 开奖星期几 (0=周日, 1=周一...)
-	DrawHour     int       `json:"draw_hour"`      // 开奖小时 (UTC时间)
+	ProductID      int       `json:"product_id"`       // 商品ID
+	LotteryPoolID  uint      `json:"lottery_pool_id"`  // 抽奖池ID
+	ProductName    string    `json:"product_name"`     // 商品名称
+	NowTargetSales int       `json:"now_target_sales"` // 当前开奖的目标销量
+	TargetSales    int       `json:"target_sales"`     // 下一轮开奖的目标销量（默认1000）
+	CurrentSales   int       `json:"current_sales"`    // 当前销量
+	PoolAmount     float64   `json:"pool_amount"`      // 奖池金额
+	IsActive       bool      `json:"is_active"`        // 是否激活
+	CreatedAt      time.Time `json:"created_at"`       // 创建时间
+	LastDrawTime   time.Time `json:"last_draw_time"`   // 上次开奖时间
+	DrawWeekDay    int       `json:"draw_week_day"`    // 开奖星期几 (0=周日, 1=周一...)
+	DrawHour       int       `json:"draw_hour"`        // 开奖小时 (UTC时间)
 }
 
 // UserHash 用户哈希值记录

@@ -18,17 +18,18 @@ func (User) TableName() string {
 
 // UserHash 用户哈希值记录表
 type UserHash struct {
-	ID          uint       `gorm:"primarykey"`
-	UserID      string     `gorm:"type:varchar(255);not null;index"`
-	OrderID     string     `gorm:"type:varchar(255);not null;uniqueIndex"`
-	ProductID   int        `gorm:"not null;index"`
-	TxHash      string     `gorm:"type:varchar(255);not null;uniqueIndex"`
-	IsValid     bool       `gorm:"not null;default:true"`
-	ResetCount  int        `gorm:"not null;default:0"`
-	LastResetAt time.Time  `gorm:"index"`
-	RefundAt    *time.Time `gorm:"index"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID            uint       `gorm:"primarykey"`
+	UserID        string     `gorm:"type:varchar(255);not null;index"`
+	OrderID       string     `gorm:"type:varchar(255);not null;uniqueIndex"`
+	LotteryPoolID uint       `gorm:"not null;index"`
+	ProductID     int        `gorm:"not null;index"`
+	TxHash        string     `gorm:"type:varchar(255);not null;uniqueIndex"`
+	IsValid       bool       `gorm:"not null;default:true"`
+	ResetCount    int        `gorm:"not null;default:0"`
+	LastResetAt   time.Time  `gorm:"index"`
+	RefundAt      *time.Time `gorm:"index"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 func (UserHash) TableName() string {
