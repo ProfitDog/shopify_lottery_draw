@@ -25,6 +25,7 @@ type UserHash struct {
 	ProductID     uint       `gorm:"not null;index"`
 	TxHash        string     `gorm:"type:varchar(255);not null;uniqueIndex"`
 	IsValid       bool       `gorm:"not null;default:true"`
+	IsDrawed      bool       `gorm:"not null;default:false"`
 	ResetCount    int        `gorm:"not null;default:0"`
 	LastResetAt   time.Time  `gorm:"index"`
 	RefundAt      *time.Time `gorm:"index"`

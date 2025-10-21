@@ -407,3 +407,13 @@ func (ls *LotteryService) GetPool(productID uint) *models.LotteryPool {
 	}
 	return nil
 }
+
+// 获取用户参与的抽奖奖池信息及内容
+func (ls *LotteryService) GetUserLotteryList(userID string) ([]entities.UserHash, error) {
+	lotteryPools, err := ls.repo.GetAllValidUserHashes(userID)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户参与的抽奖奖池信息及内容失败: %v", err)
+	}
+
+	return lotteryPools, nil
+}

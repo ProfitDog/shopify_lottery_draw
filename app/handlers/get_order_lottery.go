@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TODO: 目前无用，后续需要使用
 // GetOrderLotteryRequest 获取订单参与的抽奖活动请求
 type GetOrderLotteryRequest struct {
 	OrderNumber string `form:"order_number" binding:"required"`
@@ -23,15 +24,9 @@ func GetOrderLottery(c *gin.Context) {
 		return
 	}
 
-	// TODO: 从数据库获取订单参与的抽奖活动信息
-	lottery := LotteryBasicInfo{
-		LotteryID: 1,
-		Title:     "示例抽奖活动",
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "Success",
-		"data":    lottery,
+		"data":    1,
 	})
 }

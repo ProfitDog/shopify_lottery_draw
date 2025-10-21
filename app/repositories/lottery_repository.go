@@ -50,10 +50,10 @@ func (r *LotteryRepository) CreateUserHash(userHash *entities.UserHash) error {
 	return r.db.Create(userHash).Error
 }
 
-// GetAllValidUserHashes 获取所有有效的用户哈希记录
-func (r *LotteryRepository) GetAllValidUserHashes() ([]entities.UserHash, error) {
+// GetAllValidUserHashes 获取所有有效且未开奖的用户哈希记录
+func (r *LotteryRepository) GetAllValidUserHashes(userID string) ([]entities.UserHash, error) {
 	var hashes []entities.UserHash
-	err := r.db.Where("is_valid = ?", true).Find(&hashes).Error
+	err := r.db.Where("user_id = ? AND is_valid = ? AND is_drawed = ?", userID, true, false).Find(&hashes).Error
 	return hashes, err
 }
 
