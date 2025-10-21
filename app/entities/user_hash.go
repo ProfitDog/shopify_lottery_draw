@@ -22,7 +22,7 @@ type UserHash struct {
 	UserID        string     `gorm:"type:varchar(255);not null;index"`
 	OrderID       string     `gorm:"type:varchar(255);not null;uniqueIndex"`
 	LotteryPoolID uint       `gorm:"not null;index"`
-	ProductID     int        `gorm:"not null;index"`
+	ProductID     uint       `gorm:"not null;index"`
 	TxHash        string     `gorm:"type:varchar(255);not null;uniqueIndex"`
 	IsValid       bool       `gorm:"not null;default:true"`
 	ResetCount    int        `gorm:"not null;default:0"`

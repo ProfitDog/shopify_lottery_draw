@@ -19,20 +19,30 @@ func NewLotteryRepository(db *gorm.DB) *LotteryRepository {
 	}
 }
 
-// CreateProductPool 创建奖池
-func (r *LotteryRepository) CreateProductPool(productPool *entities.ProductPool) (uint, error) {
-	err := r.db.Create(productPool).Error
+// CreateLotteryPool 创建奖池
+func (r *LotteryRepository) CreateLotteryPool(lotteryPool *entities.LotteryPool) (uint, error) {
+	err := r.db.Create(lotteryPool).Error
 	if err != nil {
 		return 0, err
 	}
-	return productPool.ID, nil
+	return lotteryPool.ID, nil
 }
 
-// GetAllActiveProductPools 获取所有活动中的奖池信息
-func (r *LotteryRepository) GetAllActiveProductPools() ([]entities.ProductPool, error) {
-	var pools []entities.ProductPool
+// GetAllActiveLotteryPools 获取所有活动中的奖池信息
+func (r *LotteryRepository) GetAllActiveLotteryPools() ([]entities.LotteryPool, error) {
+	var pools []entities.LotteryPool
 	err := r.db.Where("is_active = ?", true).Find(&pools).Error
 	return pools, err
+}
+
+// HasActivePool 判断productId是否有活动中的奖池
+func (r *LotteryRepository) HasActivePool(productID uint) (bool, error) {
+	var count int64
+	err := r.db.Model(&entities.LotteryPool{}).Where("product_id = ? AND is_active = ?", productID, true).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // CreateUserHash 创建用户哈希记录
@@ -47,16 +57,38 @@ func (r *LotteryRepository) GetAllValidUserHashes() ([]entities.UserHash, error)
 	return hashes, err
 }
 
-// GetUserHashesByProductID 获取指定商品的所有有效哈希
-func (r *LotteryRepository) GetUserHashesByProductID(productID int) ([]entities.UserHash, error) {
-	var hashes []entities.UserHash
-	err := r.db.Where("product_id = ? AND is_valid = ?", productID, true).Find(&hashes).Error
-	return hashes, err
-}
-
 // GetUserHashesByUserID 获取指定用户的所有哈希记录
 func (r *LotteryRepository) GetUserHashesByUserID(userID string) ([]entities.UserHash, error) {
 	var hashes []entities.UserHash
 	err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&hashes).Error
 	return hashes, err
+}
+
+// 根据lotteryPoolId orderId userHash 来更新用户的userHash记录
+func (r *LotteryRepository) UpdateUserHash(lotteryPoolId uint, orderId string, targetHash string) error {
+	err := r.db.Model(&entities.UserHash{}).Where("lottery_pool_id = ? AND order_id = ?", lotteryPoolId, orderId).Update("user_hash", targetHash).Error
+	return err
+}
+
+// 退货
+func (r *LotteryRepository) RefundUserHash(lotteryPoolId uint, orderId string) error {
+	err := r.db.Model(&entities.UserHash{}).Where("lottery_pool_id = ? AND order_id = ?", lotteryPoolId, orderId).Update("is_valid", false).Error
+	return err
+}
+
+// GetUserHashesByLotteryPoolID 根据奖池ID获取所有有效的用户哈希记录
+func (r *LotteryRepository) GetUserHashesByLotteryPoolID(lotteryPoolID uint) ([]entities.UserHash, error) {
+	var hashes []entities.UserHash
+	err := r.db.Where("lottery_pool_id = ? AND is_valid = ?", lotteryPoolID, true).Find(&hashes).Error
+	return hashes, err
+}
+
+// GetLotteryPoolByID 根据奖池ID获取奖池信息
+func (r *LotteryRepository) GetLotteryPoolByID(lotteryPoolID uint) (*entities.LotteryPool, error) {
+	var pool entities.LotteryPool
+	err := r.db.Where("id = ?", lotteryPoolID).First(&pool).Error
+	if err != nil {
+		return nil, err
+	}
+	return &pool, nil
 }

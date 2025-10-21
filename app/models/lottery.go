@@ -5,8 +5,8 @@ import (
 )
 
 // ProductPool 商品奖池
-type ProductPool struct {
-	ProductID      int       `json:"product_id"`       // 商品ID
+type LotteryPool struct {
+	ProductID      uint      `json:"product_id"`       // 商品ID
 	LotteryPoolID  uint      `json:"lottery_pool_id"`  // 抽奖池ID
 	ProductName    string    `json:"product_name"`     // 商品名称
 	NowTargetSales int       `json:"now_target_sales"` // 当前开奖的目标销量
@@ -36,14 +36,15 @@ type UserHash struct {
 
 // DrawResult 开奖结果
 type DrawResult struct {
-	ID           int       `json:"id"`
-	ProductID    int       `json:"product_id"`     // 商品ID
-	BlockHash    string    `json:"block_hash"`     // 开奖区块哈希
-	WinnerHash   string    `json:"winner_hash"`    // 中奖者哈希
-	WinnerUserID string    `json:"winner_user_id"` // 中奖者用户ID
-	WinnerScore  int       `json:"winner_score"`   // 中奖者得分
-	PoolAmount   float64   `json:"pool_amount"`    // 奖池金额
-	DrawTime     time.Time `json:"draw_time"`      // 开奖时间
+	ID            int       `json:"id"`
+	LotteryPoolID uint      `json:"lottery_pool_id"` // 抽奖池ID
+	ProductID     uint      `json:"product_id"`      // 商品ID
+	BlockHash     string    `json:"block_hash"`      // 开奖区块哈希
+	WinnerHash    string    `json:"winner_hash"`     // 中奖者哈希
+	WinnerUserID  string    `json:"winner_user_id"`  // 中奖者用户ID
+	WinnerScore   int       `json:"winner_score"`    // 中奖者得分
+	PoolAmount    float64   `json:"pool_amount"`     // 奖池金额
+	DrawTime      time.Time `json:"draw_time"`       // 开奖时间
 }
 
 // ResetRequest 重置请求
@@ -61,11 +62,12 @@ type RefundRequest struct {
 
 // DrawSchedule 开奖计划
 type DrawSchedule struct {
-	ProductID    int       `json:"product_id"`
-	ProductName  string    `json:"product_name"`
-	CurrentSales int       `json:"current_sales"`
-	TargetSales  int       `json:"target_sales"`
-	Progress     float64   `json:"progress"`       // 进度百分比
-	NextDrawTime time.Time `json:"next_draw_time"` // 预计下次开奖时间
-	PoolAmount   float64   `json:"pool_amount"`
+	ProductID     uint      `json:"product_id"`
+	LotteryPoolID uint      `json:"lottery_pool_id"` // 抽奖池ID
+	ProductName   string    `json:"product_name"`
+	CurrentSales  int       `json:"current_sales"`
+	TargetSales   int       `json:"target_sales"`
+	Progress      float64   `json:"progress"`       // 进度百分比
+	NextDrawTime  time.Time `json:"next_draw_time"` // 预计下次开奖时间
+	PoolAmount    float64   `json:"pool_amount"`
 }

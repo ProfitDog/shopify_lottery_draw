@@ -21,7 +21,7 @@ func InitDB(dsn string) {
 	err = db.AutoMigrate(
 		&entities.User{},
 		&entities.Token{},
-		&entities.ProductPool{},
+		&entities.LotteryPool{},
 		&entities.UserHash{},
 		&entities.DrawResult{},
 	)
