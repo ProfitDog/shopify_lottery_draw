@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"math"
 	"shopify_lottery_draw/app/database"
 	"shopify_lottery_draw/app/entities"
 	"shopify_lottery_draw/app/models"
@@ -313,80 +312,6 @@ func (ls *LotteryService) calculateScore(userHash, blockHash string) int {
 	}
 
 	return score
-}
-
-// GetPoolStatus 获取奖池状态
-func (ls *LotteryService) GetPoolStatus(productID uint) (*models.DrawSchedule, error) {
-	pool, exists := ls.pools[productID]
-	if !exists {
-		return nil, fmt.Errorf("商品 %d 的奖池不存在", productID)
-	}
-
-	progress := float64(pool.CurrentSales) / float64(pool.TargetSales) * 100
-	nextDrawTime := ls.calculateNextDrawTime(pool)
-
-	return &models.DrawSchedule{
-		ProductID:     pool.ProductID,
-		LotteryPoolID: pool.LotteryPoolID,
-		ProductName:   pool.ProductName,
-		CurrentSales:  pool.CurrentSales,
-		TargetSales:   pool.TargetSales,
-		Progress:      math.Round(progress*100) / 100,
-		NextDrawTime:  nextDrawTime,
-		PoolAmount:    pool.PoolAmount,
-	}, nil
-}
-
-// GetAllPoolsStatus 获取所有奖池状态
-func (ls *LotteryService) GetAllPoolsStatus() []models.DrawSchedule {
-	var schedules []models.DrawSchedule
-
-	for _, pool := range ls.pools {
-		progress := float64(pool.CurrentSales) / float64(pool.TargetSales) * 100
-		nextDrawTime := ls.calculateNextDrawTime(pool)
-
-		schedules = append(schedules, models.DrawSchedule{
-			ProductID:     pool.ProductID,
-			LotteryPoolID: pool.LotteryPoolID,
-			ProductName:   pool.ProductName,
-			CurrentSales:  pool.CurrentSales,
-			TargetSales:   pool.TargetSales,
-			Progress:      math.Round(progress*100) / 100,
-			NextDrawTime:  nextDrawTime,
-			PoolAmount:    pool.PoolAmount,
-		})
-	}
-
-	return schedules
-}
-
-// calculateNextDrawTime 计算下次开奖时间
-func (ls *LotteryService) calculateNextDrawTime(pool *models.LotteryPool) time.Time {
-	now := time.Now().UTC()
-
-	// 如果当前销量已满，返回当前时间（可以立即开奖）
-	if pool.CurrentSales >= pool.TargetSales {
-		return now
-	}
-
-	// 计算下次开奖时间
-	daysUntilTarget := int(math.Ceil(float64(pool.TargetSales-pool.CurrentSales) / 10)) // 假设每天销售10个
-
-	// 找到最近的指定星期几和小时
-	targetTime := now.AddDate(0, 0, daysUntilTarget)
-
-	// 调整到指定的星期几
-	weekDayDiff := (pool.DrawWeekDay - int(targetTime.Weekday())) % 7
-	if weekDayDiff < 0 {
-		weekDayDiff += 7
-	}
-	targetTime = targetTime.AddDate(0, 0, weekDayDiff)
-
-	// 调整到指定的小时
-	targetTime = time.Date(targetTime.Year(), targetTime.Month(), targetTime.Day(),
-		pool.DrawHour, 0, 0, 0, time.UTC)
-
-	return targetTime
 }
 
 // GetDrawHistory 获取开奖历史
