@@ -27,6 +27,8 @@ func OnOrderPaidCallback(c *gin.Context) {
 		return
 	}
 
+	// TODO: 判断订单是否是有效订单 需要接入shopify订单系统
+
 	// 创建奖号记录（从hash_manager获取哈希，写入数据库，写入抽奖维护的数据结构）
 	userHash, err := lotteryService.ProcessOrder(req.UserId, req.OrderNumber, req.ProductID, 0)
 	if err != nil {

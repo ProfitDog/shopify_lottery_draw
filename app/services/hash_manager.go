@@ -28,6 +28,11 @@ var (
 	hashManagerOnce sync.Once
 )
 
+func init() {
+	hashManager := GetHashManager()
+	hashManager.RefreshGlobalPools()
+}
+
 // GetHashManager 获取哈希管理器单例
 func GetHashManager() *HashManager {
 	hashManagerOnce.Do(func() {

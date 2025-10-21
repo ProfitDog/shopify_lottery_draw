@@ -29,7 +29,7 @@ type UserHash struct {
 	IsValid     bool       `json:"is_valid"`      // 是否有效（未退货）
 	ResetCount  int        `json:"reset_count"`   // 重置次数
 	CreatedAt   time.Time  `json:"created_at"`    // 创建时间
-	LastResetAt time.Time  `json:"last_reset_at"` // 最后重置时间
+	LastResetAt *time.Time `json:"last_reset_at"` // 最后重置时间
 	RefundAt    *time.Time `json:"refund_at"`     // 退货时间
 }
 

@@ -15,6 +15,7 @@ func registerLotteryRoutes(api *gin.RouterGroup) {
 		lottery.GET("/order-info", handlers.GetOrderLottery)
 		lottery.GET("/detail", handlers.GetLotteryDetail)
 		lottery.POST("/create-pool", handlers.CreateLotteryPool)
+		lottery.POST("/on-order-paid-callback", handlers.OnOrderPaidCallback)
 		// 需要认证的接口
 		// authorized := lottery.Use(middleware.JWTAuth())
 		// {

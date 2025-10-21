@@ -50,7 +50,7 @@ func GetLotteryService() *LotteryService {
 	return lotteryService
 }
 
-// initSamplePools 初始化示例商品奖池
+// TODO: initSamplePools 初始化示例商品奖池
 func (ls *LotteryService) initSamplePools() {
 	return
 }
@@ -156,7 +156,6 @@ func (ls *LotteryService) ProcessOrder(userID, orderID string, productID uint, p
 		IsValid:       true,
 		ResetCount:    0,
 		CreatedAt:     time.Now(),
-		LastResetAt:   time.Time{},
 	})
 	if err != nil {
 		return "", fmt.Errorf("写入数据库失败: %v", err)
