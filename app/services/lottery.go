@@ -46,6 +46,7 @@ func GetLotteryService() *LotteryService {
 		// 从数据库加载数据初始化奖池
 		lotteryService.loadFromDatabase()
 	})
+
 	return lotteryService
 }
 
@@ -73,11 +74,8 @@ func (ls *LotteryService) loadFromDatabase() {
 			TargetSales:    dbLotteryPool.TargetSales,
 			CurrentSales:   dbLotteryPool.CurrentSales,
 			PoolAmount:     dbLotteryPool.PoolAmount,
-			IsActive:       dbLotteryPool.IsActive,
+			Status:         dbLotteryPool.Status,
 			CreatedAt:      dbLotteryPool.CreatedAt,
-			LastDrawTime:   dbLotteryPool.LastDrawTime,
-			DrawWeekDay:    dbLotteryPool.DrawWeekDay,
-			DrawHour:       dbLotteryPool.DrawHour,
 		}
 		ls.poolHashs[dbLotteryPool.ID] = &PoolHashs{
 			hashs: make([]string, dbLotteryPool.NowTargetSales),
@@ -109,7 +107,7 @@ func (ls *LotteryService) CreatePool(productId uint, productName string, targetS
 		ProductName:    productName,
 		NowTargetSales: targetSales,
 		TargetSales:    targetSales,
-		IsActive:       true,
+		Status:         entities.PoolStatusActive,
 		CreatedAt:      time.Now(),
 	})
 	if err != nil {
@@ -137,7 +135,7 @@ func (ls *LotteryService) ProcessOrder(userID, orderID string, productID uint, p
 		return "", fmt.Errorf("商品 %d 的奖池不存在", productID)
 	}
 
-	if !pool.IsActive {
+	if pool.Status != entities.PoolStatusActive {
 		return "", fmt.Errorf("商品 %d 的奖池未激活", productID)
 
 	}

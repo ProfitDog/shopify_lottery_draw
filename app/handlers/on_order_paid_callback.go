@@ -14,10 +14,9 @@ type OrderPaidCallbackRequest struct {
 	ProductID   uint   `json:"product_id"`   // 商品号
 }
 
-var lotteryService = services.GetLotteryService()
-
 // OnOrderPaidCallback 处理订单支付回调
 func OnOrderPaidCallback(c *gin.Context) {
+	lotteryService := services.GetLotteryService()
 	var req OrderPaidCallbackRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

@@ -2,22 +2,30 @@ package entities
 
 import "time"
 
-// ProductPool 商品奖池表
+// LotteryPool 商品奖池表
 type LotteryPool struct {
-	ID             uint      `gorm:"primarykey"`
-	ProductID      uint      `gorm:"not null"`
-	ProductName    string    `gorm:"type:varchar(255);not null"`
-	NowTargetSales int       `gorm:"not null;default:1000"`
-	TargetSales    int       `gorm:"not null;default:1000"`
-	CurrentSales   int       `gorm:"not null;default:0"`
-	PoolAmount     float64   `gorm:"type:decimal(20,2);not null;default:0"`
-	IsActive       bool      `gorm:"not null;default:true"`
-	DrawWeekDay    int       `gorm:"not null"`
-	DrawHour       int       `gorm:"not null"`
-	LastDrawTime   time.Time `gorm:"index"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID             uint       `gorm:"primarykey"`
+	ProductID      uint       `gorm:"not null"`
+	ProductName    string     `gorm:"type:varchar(255);not null"`
+	NowTargetSales int        `gorm:"not null;default:1000"`
+	TargetSales    int        `gorm:"not null;default:1000"`
+	CurrentSales   int        `gorm:"not null;default:0"`
+	PoolAmount     float64    `gorm:"type:decimal(20,2);not null;default:0"`
+	Status         PoolStatus `gorm:"not null;default:1"`
+	DrawTime       *time.Time `gorm:"default:null"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime"`
 }
+
+// 奖池状态枚举
+type PoolStatus uint
+
+const (
+	PoolStatusActive   PoolStatus = 1 // 活跃中 - 可注入
+	PoolStatusPaused   PoolStatus = 2 // 已暂停 - 暂停注入
+	PoolStatusWaiting  PoolStatus = 3 // 待开奖 - 奖池已关闭注入，等待开奖
+	PoolStatusFinished PoolStatus = 4 // 已开奖 - 开奖完成
+)
 
 func (LotteryPool) TableName() string {
 	return "lottery_pools"

@@ -14,7 +14,7 @@ func SetupRouter() *gin.Engine {
 	// 注册认证路由
 	registerAuthRoutes(router)
 
-	// 注册所有路由
+	// 注册奖池接口路由
 	registerRoutes(router)
 
 	return router

@@ -35,7 +35,7 @@ func (r *LotteryRepository) GetAllActiveLotteryPools() ([]entities.LotteryPool, 
 	return pools, err
 }
 
-// HasActivePool 判断productId是否有活动中的奖池
+// HasActivePool 判断productId是不是活动中的奖池
 func (r *LotteryRepository) HasActivePool(productID uint) (bool, error) {
 	var count int64
 	err := r.db.Model(&entities.LotteryPool{}).Where("product_id = ? AND is_active = ?", productID, true).Count(&count).Error
