@@ -11,7 +11,7 @@ import (
 type OrderPaidCallbackRequest struct {
 	OrderNumber string `json:"order_number"` // 订单号
 	UserId      string `json:"user_id"`      // 用户ID
-	ProductID   int    `json:"product_id"`   // 商品号
+	ProductID   uint   `json:"product_id"`   // 商品号
 }
 
 var lotteryService = services.GetLotteryService()
@@ -47,8 +47,7 @@ func OnOrderPaidCallback(c *gin.Context) {
 			"order_number": req.OrderNumber,
 			"user_id":      req.UserId,
 			"product_id":   req.ProductID,
-			"lottery_id":   userHash.ID,
-			"tx_hash":      userHash.TxHash,
+			"tx_hash":      userHash,
 		},
 	})
 }
