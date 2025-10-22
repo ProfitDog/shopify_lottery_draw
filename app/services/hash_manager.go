@@ -48,12 +48,12 @@ func GetHashManager() *HashManager {
 }
 
 // GetHashForPool 为lottery pool获取一个哈希（随机选择全局池）
-func (m *HashManager) GetHashForPool(poolHashes []string) (string, error) {
+func (m *HashManager) GetHashForPool(poolHashs []string) (string, error) {
 	// 生成1~5之间的随机数（索引0~4）
 	randomIdx := rand.Intn(5)
 
 	// 从随机选中的池获取下一个哈希（内部自动加锁、索引自增）
-	hash, ok := m.globalPools[randomIdx].GetNext(poolHashes)
+	hash, ok := m.globalPools[randomIdx].GetNext(poolHashs)
 	if ok {
 		return hash, nil
 	}
@@ -68,23 +68,23 @@ func (m *HashManager) RefreshGlobalPools() error {
 	defer m.blockHeightLock.Unlock()
 
 	// 获取5000个交易哈希
-	var allHashes []string
-	for len(allHashes) < 5000 {
-		hashes, err := m.GetBtcOrderHash(m.currentBlockHeight, 5000-len(allHashes), 0)
+	var allHashs []string
+	for len(allHashs) < 5000 {
+		hashs, err := m.GetBtcOrderHash(m.currentBlockHeight, 5000-len(allHashs), 0)
 		if err != nil {
 			return fmt.Errorf("获取区块交易失败: %v", err)
 		}
 
-		if len(hashes) == 0 {
+		if len(hashs) == 0 {
 			// 当前区块没有交易，尝试前一个区块
 			m.currentBlockHeight--
 			continue
 		}
 
-		allHashes = append(allHashes, hashes...)
+		allHashs = append(allHashs, hashs...)
 
 		// 如果获取到足够的哈希，跳出循环
-		if len(allHashes) >= 5000 {
+		if len(allHashs) >= 5000 {
 			break
 		}
 
@@ -93,19 +93,19 @@ func (m *HashManager) RefreshGlobalPools() error {
 	}
 
 	// 限制为5000个
-	if len(allHashes) > 5000 {
-		allHashes = allHashes[:5000]
+	if len(allHashs) > 5000 {
+		allHashs = allHashs[:5000]
 	}
 
 	// 分配到5个全局池，每池1000个
 	for i := 0; i < 5; i++ {
 		start := i * 1000
 		end := start + 1000
-		if end > len(allHashes) {
-			end = len(allHashes)
+		if end > len(allHashs) {
+			end = len(allHashs)
 		}
-		if start < len(allHashes) {
-			m.globalPools[i].Set(allHashes[start:end])
+		if start < len(allHashs) {
+			m.globalPools[i].Set(allHashs[start:end])
 		}
 	}
 
@@ -114,7 +114,7 @@ func (m *HashManager) RefreshGlobalPools() error {
 
 // GetBtcOrderHash 获取指定区块高度的交易哈希
 func (m *HashManager) GetBtcOrderHash(blockHeight int, limit int, offset int) ([]string, error) {
-	blockHashes, err := m.GetBlockTransactions(blockHeight)
+	blockHashs, err := m.GetBlockTransactions(blockHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -129,14 +129,14 @@ func (m *HashManager) GetBtcOrderHash(blockHeight int, limit int, offset int) ([
 	start := offset
 	end := offset + limit
 
-	if start >= len(blockHashes) {
+	if start >= len(blockHashs) {
 		return []string{}, nil
 	}
-	if end > len(blockHashes) {
-		end = len(blockHashes)
+	if end > len(blockHashs) {
+		end = len(blockHashs)
 	}
 
-	return blockHashes[start:end], nil
+	return blockHashs[start:end], nil
 }
 
 // getBlockTransactions 获取指定区块高度中的交易
@@ -197,19 +197,19 @@ func (m *HashManager) GetBlockTransactions(height int) ([]string, error) {
 }
 
 // PreloadGlobalPools 预加载全局哈希池（测试或启动时调用）
-func (m *HashManager) PreloadGlobalPools(hashes []string) {
+func (m *HashManager) PreloadGlobalPools(hashs []string) {
 	// 平均分配到5个全局池，每池最多1000个
 	chunkSize := 1000
 	for i := 0; i < 5; i++ {
 		start := i * chunkSize
 		end := start + chunkSize
-		if start >= len(hashes) {
+		if start >= len(hashs) {
 			break
 		}
-		if end > len(hashes) {
-			end = len(hashes)
+		if end > len(hashs) {
+			end = len(hashs)
 		}
-		m.globalPools[i].Set(hashes[start:end])
+		m.globalPools[i].Set(hashs[start:end])
 	}
 }
 
@@ -219,7 +219,7 @@ func (m *HashManager) PreloadGlobalPools(hashes []string) {
 // 	poolStatus := make([]map[string]int, 5)
 // 	for i := 0; i < 5; i++ {
 // 		total := m.globalPools[i].Len()
-// 		remaining := m.globalPools[i].Len() - len(poolHashes)
+// 		remaining := m.globalPools[i].Len() - len(poolHashs)
 // 		poolStatus[i] = map[string]int{
 // 			"total":     total,
 // 			"remaining": remaining,

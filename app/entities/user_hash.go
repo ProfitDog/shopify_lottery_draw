@@ -34,5 +34,5 @@ type UserHash struct {
 }
 
 func (UserHash) TableName() string {
-	return "user_hashes"
+	return "user_hashs"
 }

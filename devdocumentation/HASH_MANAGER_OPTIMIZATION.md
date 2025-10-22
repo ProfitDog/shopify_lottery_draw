@@ -40,7 +40,7 @@ type HashPool struct {
 
 - `GetPool(poolID)` - 获取或创建指定lottery pool的哈希池
 - `Pop()` - 从可用队列弹出哈希，标记为已使用
-- `Push(hashes)` - 添加新哈希到可用队列
+- `Push(hashs)` - 添加新哈希到可用队列
 - `GetHashForPool(poolID)` - 为指定pool获取一个可用哈希
 
 ### 📊 工作流程
@@ -116,7 +116,7 @@ type HashPool struct {
 5. 重复步骤2-4直到找到可用哈希
 ```
 
-**prefetchHashes(poolIndex)**:
+**prefetchHashs(poolIndex)**:
 ```go
 1. 异步从区块链获取新批次哈希（默认100个）
 2. 补充到指定的被耗尽的全局池
@@ -211,7 +211,7 @@ type HashManager struct {
 
 // HashPool - 完全重构，从队列改为数组
 type HashPool struct {
-    hashes []string      // 固定的哈希数组（最多1000个）
+    hashs []string      // 固定的哈希数组（最多1000个）
     mu     sync.RWMutex  // 读写锁
 }
 ```
@@ -223,12 +223,12 @@ type HashPool struct {
 **旧方法**:
 ```go
 Pop() (string, bool)              // 删除并返回
-Push(hashes []string) int         // 添加到队列
+Push(hashs []string) int         // 添加到队列
 ```
 
 **新方法**:
 ```go
-Set(hashes []string)              // 设置池内容（替换）
+Set(hashs []string)              // 设置池内容（替换）
 Get(index int) (string, bool)     // 按索引获取（不删除）
 Len() int                         // 获取数量
 GetAll() []string                 // 获取所有（调试用）
@@ -269,13 +269,13 @@ func (m *HashManager) GetHashForPool(lotteryPoolID int) (string, error) {
 ```go
 func (m *HashManager) RefreshGlobalPools() error {
     // 获取5000个交易哈希
-    allHashes := fetchHashesFromBlockchain(5000)
+    allHashs := fetchHashsFromBlockchain(5000)
     
     // 分配到5个全局池，每池1000个
     for i := 0; i < 5; i++ {
         start := i * 1000
         end := start + 1000
-        m.globalPools[i].Set(allHashes[start:end])
+        m.globalPools[i].Set(allHashs[start:end])
     }
 }
 ```

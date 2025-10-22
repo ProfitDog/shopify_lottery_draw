@@ -137,8 +137,9 @@ func (ls *LotteryService) ProcessOrder(userID, orderID string, productID uint, p
 
 	if pool.Status != entities.PoolStatusActive {
 		return "", fmt.Errorf("商品 %d 的奖池未激活", productID)
-
 	}
+
+	//TODO
 
 	// 通过哈希管理器获取可用的比特币交易哈希
 	hashManager := GetHashManager()
@@ -161,7 +162,7 @@ func (ls *LotteryService) ProcessOrder(userID, orderID string, productID uint, p
 		return "", fmt.Errorf("写入数据库失败: %v", err)
 	}
 
-	// 添加到奖池哈希列表
+	// 初始化奖池
 	if ls.poolHashs[pool.LotteryPoolID] == nil {
 		ls.poolHashs[pool.LotteryPoolID] = &PoolHashs{
 			hashs: make([]string, 0),
@@ -169,15 +170,18 @@ func (ls *LotteryService) ProcessOrder(userID, orderID string, productID uint, p
 		}
 	}
 
-	ls.poolHashs[pool.LotteryPoolID].mu.Lock()
-	ls.poolHashs[pool.LotteryPoolID].hashs = append(ls.poolHashs[pool.LotteryPoolID].hashs, txHash)
-	ls.poolHashs[pool.LotteryPoolID].mu.Unlock()
-
 	// 更新奖池
 	ls.mu.Lock()
 	ls.pools[productID].CurrentSales++
 	ls.pools[productID].PoolAmount += profit
+	if ls.pools[productID].CurrentSales >= ls.pools[productID].TargetSales {
+		ls.pools[productID].Status = entities.PoolStatusWaiting
+	}
 	ls.mu.Unlock()
+
+	ls.poolHashs[pool.LotteryPoolID].mu.Lock()
+	ls.poolHashs[pool.LotteryPoolID].hashs = append(ls.poolHashs[pool.LotteryPoolID].hashs, txHash)
+	ls.poolHashs[pool.LotteryPoolID].mu.Unlock()
 
 	return txHash, nil
 }
@@ -237,12 +241,12 @@ func (ls *LotteryService) ConductDraw(productID uint, blockHash string) (*models
 	}
 
 	// 从数据库查询该奖池的所有有效用户哈希记录
-	dbHashes, err := ls.repo.GetUserHashesByLotteryPoolID(pool.LotteryPoolID)
+	dbHashs, err := ls.repo.GetUserHashsByLotteryPoolID(pool.LotteryPoolID)
 	if err != nil {
 		return nil, fmt.Errorf("查询有效参与者失败: %v", err)
 	}
 
-	if len(dbHashes) == 0 {
+	if len(dbHashs) == 0 {
 		return nil, fmt.Errorf("没有有效的参与者")
 	}
 
@@ -255,7 +259,7 @@ func (ls *LotteryService) ConductDraw(productID uint, blockHash string) (*models
 	}
 
 	var scores []ScoreEntry
-	for _, hash := range dbHashes {
+	for _, hash := range dbHashs {
 		score := ls.calculateScore(hash.TxHash, blockHash)
 		scores = append(scores, ScoreEntry{
 			UserID:    hash.UserID,
@@ -332,7 +336,7 @@ func (ls *LotteryService) GetPool(productID uint) *models.LotteryPool {
 
 // 获取用户参与的抽奖奖池信息及内容
 func (ls *LotteryService) GetUserLotteryList(userID string) ([]entities.UserHash, error) {
-	lotteryPools, err := ls.repo.GetAllValidUserHashes(userID)
+	lotteryPools, err := ls.repo.GetAllValidUserHashs(userID)
 	if err != nil {
 		return nil, fmt.Errorf("获取用户参与的抽奖奖池信息及内容失败: %v", err)
 	}

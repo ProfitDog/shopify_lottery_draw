@@ -50,18 +50,18 @@ func (r *LotteryRepository) CreateUserHash(userHash *entities.UserHash) error {
 	return r.db.Create(userHash).Error
 }
 
-// GetAllValidUserHashes 获取所有有效且未开奖的用户哈希记录
-func (r *LotteryRepository) GetAllValidUserHashes(userID string) ([]entities.UserHash, error) {
-	var hashes []entities.UserHash
-	err := r.db.Where("user_id = ? AND is_valid = ? AND is_drawed = ?", userID, true, false).Find(&hashes).Error
-	return hashes, err
+// GetAllValidUserHashs 获取所有有效且未开奖的用户哈希记录
+func (r *LotteryRepository) GetAllValidUserHashs(userID string) ([]entities.UserHash, error) {
+	var hashs []entities.UserHash
+	err := r.db.Where("user_id = ? AND is_valid = ? AND is_drawed = ?", userID, true, false).Find(&hashs).Error
+	return hashs, err
 }
 
-// GetUserHashesByUserID 获取指定用户的所有哈希记录
-func (r *LotteryRepository) GetUserHashesByUserID(userID string) ([]entities.UserHash, error) {
-	var hashes []entities.UserHash
-	err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&hashes).Error
-	return hashes, err
+// GetUserHashsByUserID 获取指定用户的所有哈希记录
+func (r *LotteryRepository) GetUserHashsByUserID(userID string) ([]entities.UserHash, error) {
+	var hashs []entities.UserHash
+	err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&hashs).Error
+	return hashs, err
 }
 
 // 根据lotteryPoolId orderId userHash 来更新用户的userHash记录
@@ -76,11 +76,11 @@ func (r *LotteryRepository) RefundUserHash(lotteryPoolId uint, orderId string) e
 	return err
 }
 
-// GetUserHashesByLotteryPoolID 根据奖池ID获取所有有效的用户哈希记录
-func (r *LotteryRepository) GetUserHashesByLotteryPoolID(lotteryPoolID uint) ([]entities.UserHash, error) {
-	var hashes []entities.UserHash
-	err := r.db.Where("lottery_pool_id = ? AND is_valid = ?", lotteryPoolID, true).Find(&hashes).Error
-	return hashes, err
+// GetUserHashsByLotteryPoolID 根据奖池ID获取所有有效的用户哈希记录
+func (r *LotteryRepository) GetUserHashsByLotteryPoolID(lotteryPoolID uint) ([]entities.UserHash, error) {
+	var hashs []entities.UserHash
+	err := r.db.Where("lottery_pool_id = ? AND is_valid = ?", lotteryPoolID, true).Find(&hashs).Error
+	return hashs, err
 }
 
 // GetLotteryPoolByID 根据奖池ID获取奖池信息
