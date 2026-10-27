@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>edges</title>
+<link rel="stylesheet" href="/dist/site/fonts/fonts.css"></head><body>
+<script src="/dist/site/engine.js"></script>
+<script>
+// 检查每张贴图是否被裁掉：透明边框上不该有像素
+(async function () {
+  const bad = [], dirs = ['左上', '右上', '左下', '右下'];
+  for (const t of YF.TYPE_ORDER) {
+    const all = YF.KIND_ORDER.map(k => Object.values(YF.KINDS[k].def).join('')).join('') + '2026.10.27';
+    await YF.fontsReady(t, all);
+    for (const sk of Object.keys(YF.TYPES[t].schemes)) for (const k of YF.KIND_ORDER) for (const v of [false, true]) for (const seal of ['none', 'brand']) {
+      if (v && !(YF.KINDS[k].vertical || []).includes(t)) continue;
+      const dl = k === 'callout' ? dirs : [null];
+      for (const dir of dl) {
+        const data = Object.assign({}, YF.KINDS[k].def, { date: '2026.10.27' }, dir ? { dir } : {});
+        const c = YF.renderCrop({ type: t, kind: k, scheme: sk, data, opts: { vertical: v, seal }, scale: 1 }, null, 1);
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+        let hit = 0;
+        for (let x = 0; x < W; x++) { if (d[(x) * 4 + 3] > 8) hit++; if (d[((H - 1) * W + x) * 4 + 3] > 8) hit++; }
+        for (let y = 0; y < H; y++) { if (d[(y * W) * 4 + 3] > 8) hit++; if (d[(y * W + W - 1) * 4 + 3] > 8) hit++; }
+        if (hit) bad.push(`${t}/${sk}/${k}${v ? '(竖)' : ''}${dir ? '/' + dir : ''}/seal:${seal} → ${hit}px at edge (${W}x${H})`);
+      }
+    }
+  }
+  window.__result = bad; window.__done = true;
+})().catch(e => { window.__result = ['ERROR ' + e.stack]; window.__done = true; });
+</script></body></html>

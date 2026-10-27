@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>壹芳贴图工坊</title>
+<meta name="description" content="壹芳珠宝的剪映贴图素材包工具：先锁定视频类型，再编辑文字，导出透明 PNG。">
+<meta name="theme-color" content="#1A1F1C">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='6' width='52' height='52' rx='6' fill='%23B3352B'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23F2EEE3' font-family='serif' font-weight='900'%3E%E5%A3%B9%3C/text%3E%3C/svg%3E">
+<!--FONTCSS-->
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <canvas id="brandSeal" class="brandseal" aria-hidden="true"></canvas>
+      <div>
+        <h1>壹芳贴图工坊</h1>
+        <p class="tagline">剪映贴图素材包 · 先锁定视频类型，再写字、导出透明 PNG</p>
+      </div>
+    </div>
+    <div class="topacts">
+      <button type="button" class="ghost" id="helpBtn" aria-expanded="false" aria-controls="help">怎么导入剪映</button>
+      <button type="button" class="ghost" id="brandBtn" aria-expanded="false" aria-controls="brandPanel">品牌设置</button>
+    </div>
+  </header>
+
+  <section id="help" class="drawer" hidden>
+    <h2 class="drawer-title">从这里到剪映，五步</h2>
+    <ol class="howto">
+      <li><b>锁定类型、做贴图。</b>左边先选这条视频属于哪一类，再选贴图种类、改文字，点「加入素材包」。一条视频要用的贴图都放进来。</li>
+      <li><b>下载素材包。</b>点最下面的「下载素材包 ZIP」，解压成一个文件夹。文件名前面的 01、02… 就是你加入的顺序，可以按脚本顺序排好。</li>
+      <li><b>导入剪映。</b>剪映专业版：媒体 → 本地 → 导入，选中文件夹里的 PNG（手机版：剪辑 → 画中画 → 新增画中画 → 照片）。</li>
+      <li><b>贴到对应的位置。</b>把贴图拖到主轨上方的轨道，对准要强调的那一句，拉长到合适的时长。</li>
+      <li><b>加动画。</b>选中贴图 → 动画 → 入场 / 出场 / 组合，比如「渐显」「向上滑动」「弹入」，再调动画时长。</li>
+    </ol>
+    <p class="tip"><b>两种导出方式怎么选：</b>「裁切贴图」只包含贴图本身，适合在剪映里自己摆位置、做放大缩小类动画；「整屏定位」导出 1080×1920 的透明整屏图，拖进剪映就在预览里的位置，不用再挪，适合统一版式。</p>
+  </section>
+
+  <section id="brandPanel" class="drawer" hidden>
+    <h2 class="drawer-title">品牌设置</h2>
+    <div class="brandform">
+      <div class="field">
+        <label for="brandName">品牌名</label>
+        <input type="text" id="brandName" maxlength="12" autocomplete="off">
+        <p class="hint">会出现在「鉴宝笔记」「文玩词典」这类小标题里。</p>
+      </div>
+      <div class="field">
+        <label for="brandSealText">印章文字（1–4 个字）</label>
+        <input type="text" id="brandSealText" maxlength="4" autocomplete="off">
+        <p class="hint">两个字是竖长章，四个字是方章（右起竖读）。</p>
+      </div>
+    </div>
+    <p class="hint">设置和素材包只保存在这台电脑的这个浏览器里，换电脑不会同步。</p>
+  </section>
+
+  <main class="work">
+    <section class="pane types" aria-labelledby="hTypes">
+      <h2 id="hTypes" class="step"><b>1</b>锁定视频类型</h2>
+      <div id="typeList" class="typelist" role="radiogroup" aria-labelledby="hTypes"></div>
+    </section>
+
+    <section class="pane kinds" aria-labelledby="hKinds">
+      <h2 id="hKinds" class="step"><b>2</b>选贴图</h2>
+      <div id="kindGrid" class="kindgrid"></div>
+    </section>
+
+    <section class="pane stage" aria-label="预览">
+      <div class="stagebar">
+        <div class="seg dark" id="bgSeg" role="group" aria-label="预览背景"></div>
+        <label class="chip"><input type="checkbox" id="safeToggle"> 抖音安全区</label>
+        <input type="file" id="bgFile" accept="image/*" hidden>
+      </div>
+      <div class="stagewrap">
+        <canvas id="stage" tabindex="0" aria-label="贴图预览。拖动贴图可以调整位置，选中后方向键微调。"></canvas>
+        <p class="loading" id="stageLoading" hidden>字体加载中…</p>
+      </div>
+      <div class="stagefoot">
+        <div class="posbox">
+          <span class="lbl light">快速摆放</span>
+          <div class="posgrid" id="posGrid" role="group" aria-label="快速摆放"></div>
+        </div>
+        <p class="hint light">拖动贴图调位置，点一下预览后可用方向键微调。位置只影响「整屏定位」导出。</p>
+      </div>
+    </section>
+
+    <section class="pane edit">
+      <div class="lockbar" id="lockBar"></div>
+
+      <div class="block">
+        <div class="blockhead">
+          <h2 class="step"><b>3</b>写文字</h2>
+          <button type="button" class="ghost small" id="batchToggle" aria-expanded="false" aria-controls="batch">批量生成</button>
+        </div>
+        <div id="fields" class="fields"></div>
+        <div id="batch" class="batch" hidden>
+          <label for="batchText" class="lbl">批量生成 · 每行一张</label>
+          <textarea id="batchText" rows="5"></textarea>
+          <p class="hint" id="batchHint"></p>
+          <div class="actions">
+            <button type="button" class="primary" id="batchGo">生成并加入素材包</button>
+            <button type="button" class="ghost" id="batchClose">收起</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2 class="step"><b>4</b>调样式</h2>
+        <div id="styleCtl" class="stylectl"></div>
+      </div>
+
+      <div class="block exportbox">
+        <div class="row">
+          <span class="lbl">导出方式</span>
+          <div class="seg" id="modeSeg" role="group" aria-label="导出方式"></div>
+        </div>
+        <p class="hint" id="modeHint"></p>
+        <div class="row">
+          <span class="lbl">清晰度</span>
+          <div class="seg" id="pxSeg" role="group" aria-label="清晰度"></div>
+        </div>
+        <div class="editing" id="editingBar" hidden>
+          <span id="editingText"></span>
+          <button type="button" class="ghost small" id="saveAsNew">另存为新的一张</button>
+          <button type="button" class="ghost small" id="cancelEdit">取消修改</button>
+        </div>
+        <div class="actions">
+          <button type="button" class="primary" id="addBtn">加入素材包</button>
+          <button type="button" class="secondary" id="dlBtn">下载这张 PNG</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section class="tray" aria-labelledby="hTray">
+    <div class="trayhead">
+      <h2 id="hTray" class="step"><b>5</b>素材包 <span class="count" id="trayCount"></span></h2>
+      <div class="trayacts">
+        <span class="hint" id="zipNote"></span>
+        <button type="button" class="ghost" id="clearBtn">清空</button>
+        <button type="button" class="primary" id="zipBtn">下载素材包 ZIP</button>
+      </div>
+    </div>
+    <ol id="trayList" class="traylist"></ol>
+    <p class="empty" id="trayEmpty">还没有贴图。做好一张就点「加入素材包」，一条视频的贴图攒齐了再一起下载。</p>
+  </section>
+
+  <footer class="foot">
+    <p>字体全部是 SIL OFL 开源授权、可免费商用：思源宋体、思源黑体、站酷小薇体、站酷庆科黄油体、马善政楷书、Anton、Cormorant Garamond。贴图里的文字已经画进 PNG，剪映里不需要再装字体。</p>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!--SCRIPTS-->
+</body>
+</html>

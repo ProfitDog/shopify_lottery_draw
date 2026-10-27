@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>sheet</title>
+<link rel="stylesheet" href="/dist/site/fonts/fonts.css">
+<style>
+body{margin:0;background:#3B403C;color:#ddd;font:14px system-ui;padding:20px;width:2100px}
+section{margin-bottom:40px} h2{margin:0 0 10px;font-size:22px;color:#fff}
+.row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;margin-bottom:22px;padding:12px;border-radius:8px}
+.row.light{background:#CFC9BC}
+figure{margin:0;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+figcaption{font-size:12px;color:#bbb}
+canvas{outline:1px dashed rgba(255,255,255,.18)}
+</style></head><body>
+<div id="out"></div>
+<script src="/dist/site/engine.js"></script>
+<script>
+(async function(){
+  const out = document.getElementById('out');
+  const only = new URLSearchParams(location.search).get('type');
+  const types = only ? [only] : YF.TYPE_ORDER;
+  for (const t of types) {
+    const ty = YF.TYPES[t];
+    const all = YF.KIND_ORDER.map(k => Object.values(YF.KINDS[k].def).join('')).join('') + '2026.10.27';
+    await YF.fontsReady(t, all);
+    const sec = document.createElement('section'); sec.id = 'sec-' + t;
+    sec.innerHTML = '<h2>' + ty.name + ' · ' + ty.theme + '</h2>';
+    for (const sk of Object.keys(ty.schemes)) {
+      const row = document.createElement('div'); row.className = 'row' + (sk === 'bare' ? '' : '');
+      const list = [];
+      YF.KIND_ORDER.forEach(k => {
+        list.push({ k, v: false });
+        if ((YF.KINDS[k].vertical || []).includes(t)) list.push({ k, v: true });
+      });
+      for (const it of list) {
+        const data = Object.assign({}, YF.KINDS[it.k].def, it.k === 'place' ? { date: '2026.10.27' } : {});
+        const spec = { type: t, kind: it.k, scheme: sk, alt: false, data, opts: { vertical: it.v, align: 'left', seal: 'brand' }, scale: 1 };
+        const c = YF.renderCrop(spec, null, 0.4);
+        const fig = document.createElement('figure'); fig.appendChild(c);
+        const cap = document.createElement('figcaption'); cap.textContent = sk + ' / ' + YF.KINDS[it.k].name + (it.v ? '（竖）' : '');
+        fig.appendChild(cap); row.appendChild(fig);
+      }
+      sec.appendChild(row);
+    }
+    out.appendChild(sec);
+  }
+  window.__done = true;
+})().catch(e => { document.body.insertAdjacentHTML('beforeend', '<pre style="color:red">' + e.stack + '</pre>'); window.__done = true; });
+</script>
+</body></html>
